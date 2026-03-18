@@ -76,11 +76,11 @@ else:
 st.sidebar.header("Configuration")
 llm_choice = st.sidebar.radio("LLM Provider", ["OpenRouter (Free API)", "Local (Hugging Face)"])
 openrouter_key = ""
-openrouter_model = "google/gemini-2.5-flash:free"
+openrouter_model = "google/gemma-2-9b-it:free"
 if llm_choice == "OpenRouter (Free API)":
     openrouter_key = st.sidebar.text_input("OpenRouter API Key", type="password")
     st.sidebar.markdown("[Get Free Key](https://openrouter.ai/keys)")
-    st.sidebar.info("Recommmended Model: `google/gemini-2.5-flash:free` or `mistralai/mistral-7b-instruct:free`")
+    st.sidebar.info("Recommmended Model: `google/gemma-2-9b-it:free` or `mistralai/mistral-7b-instruct:free`")
 
 # --- RAG RETRIEVAL ---
 def retrieve(query, top_k=3):
