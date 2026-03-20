@@ -136,8 +136,10 @@ if prompt:
                 response = client.chat.completions.create(
                     model=openrouter_model,
                     messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
+                        {
+                            "role": "user",
+                            "content": f"{system_prompt}\n\n{user_prompt}"
+                        }
                     ],
                     temperature=0.1,
                 )
