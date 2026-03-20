@@ -90,6 +90,12 @@ def retrieve(query, top_k=3):
     for idx in indices[0]:
         retrieved.append(chunk_metadata[idx])
     return retrieved
+def is_grounded(answer, contexts):
+    context_text = " ".join([c["text"] for c in contexts]).lower()
+    answer_words = answer.lower().split()
+    
+    overlap = sum(1 for w in answer_words if w in context_text)
+    return overlap / max(len(answer_words), 1)
 
 # --- STREAMLIT CHAT UI ---
 if "messages" not in st.session_state:
@@ -114,14 +120,16 @@ if prompt:
 
     start_time = time.time()
     # 1. Retrieval
-    retrieved_chunks = retrieve(prompt, top_k=3)
+    retrieved_chunks = retrieve(prompt, top_k=5)
     context_text = "\n\n---\n\n".join([f"Source: {c['source']}\n{c['text']}" for c in retrieved_chunks])
     
     # 2. Generation
     system_prompt = (
-        "You are a helpful AI assistant for Indecimal, a construction marketplace. "
-        "Answer the user's question explicitly and strictly based on the provided Context. "
-        "If the answer cannot be deduced from the Context, kindly state that you do not have enough information."
+    "You are a strict AI assistant for Indecimal.\n"
+    "Answer ONLY using the provided context.\n"
+    "If the answer is not explicitly present in the context, respond EXACTLY with:\n"
+    "'I do not have enough information.'\n"
+    "Do NOT infer, assume, or add any external knowledge.\n"
     )
     user_prompt = f"Context:\n{context_text}\n\nQuestion: {prompt}"
 
@@ -149,18 +157,38 @@ if prompt:
         else:
             # Local LLM generator
             local_pipe = load_local_llm()
+            tokenizer = local_pipe.tokenizer
+        
             messages = [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
-            response = local_pipe(messages, max_new_tokens=256, return_full_text=False)
-            final_answer = response[0]['generated_text']
-
+        
+            prompt_text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+        
+            response = local_pipe(
+                prompt_text,
+                max_new_tokens=256,
+                return_full_text=False
+            )
+        
+            final_answer = response[0]["generated_text"]
+    # Grounding check
+    score = is_grounded(final_answer, retrieved_chunks)
+    
+    if score < 0.3 and "not have enough information" not in final_answer.lower():
+       final_answer = "I do not have enough information."
     latency = time.time() - start_time
 
     # 3. Output display
+    sources = list(set([c["source"] for c in retrieved_chunks]))
+    final_answer_with_sources = final_answer + f"\n\n(Sources: {', '.join(sources)})"
     with st.chat_message("assistant"):
-        st.write(final_answer)
+        st.write(final_answer_with_sources)
         st.caption(f"⏱️ Latency: {latency:.2f}s | Provider: {llm_choice}")
         with st.expander("Show Retrieved Context (Transparency)"):
             for i, ctx in enumerate(retrieved_chunks):
@@ -169,6 +197,6 @@ if prompt:
         
     st.session_state.messages.append({
         "role": "assistant", 
-        "content": final_answer, 
+        "content": final_answer_with_sources, 
         "contexts": retrieved_chunks
     })
