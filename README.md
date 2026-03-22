@@ -24,7 +24,7 @@ This project implements a Retrieval-Augmented Generation (RAG) assistant for the
 
 ### 2. Vector Indexing and Retrieval
 - **Vector Store:** `faiss-cpu` (Facebook AI Similarity Search). 
-- **Retrieval:** Using `faiss.IndexFlatL2` to perform exact nearest neighbor search based on L2 distance. We retrieve the `top_k=3` most relevant paragraphs for every user query.
+- **Retrieval:** Using `faiss.IndexFlatL2` to perform exact nearest neighbor search based on L2 distance. We retrieve the `top_k=5` most relevant paragraphs for every user query.
 
 ### 3. Model Choice & Grounding
 Users can toggle between two LLM execution modes from the sidebar:
